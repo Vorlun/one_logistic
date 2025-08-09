@@ -40,4 +40,26 @@ export class MailService {
       throw new InternalServerErrorException("Failed to send email");
     }
   }
+
+  async sendActivationEmail(to: string, activationLink: string): Promise<void> {
+    const url = `${this.configService.get("URL")}:${this.configService.get("PORT")}/api/auth/activate/${activationLink}`;
+
+    const mailOptions = {
+      from: `"ONE Logistic" <${this.configService.get("MAIL_USERNAME")}>`,
+      to,
+      subject: "Account Activation",
+      html: `
+      <h2>Welcome!</h2>
+      <p>Please click the link below to activate your account:</p>
+      <a href="${url}">${url}</a>
+    `,
+    };
+
+    try {
+      await this.transporter.sendMail(mailOptions);
+    } catch (err) {
+      console.error("Activation email sending error:", err);
+      throw new InternalServerErrorException("Failed to send activation email");
+    }
+  }
 }

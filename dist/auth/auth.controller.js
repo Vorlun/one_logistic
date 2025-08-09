@@ -43,6 +43,13 @@ let AuthController = class AuthController {
             };
         return this.authService.register(dto, caller, res);
     }
+    async registerAdmin(dto, currentUser, res) {
+        const caller = currentUser ??
+            {
+                role: { id: 0, name: "guest", level: 0 },
+            };
+        return this.authService.register(dto, caller, res);
+    }
     async login(email, password, res) {
         return this.authService.login(email, password, res);
     }
@@ -60,6 +67,9 @@ let AuthController = class AuthController {
     }
     async setNewPassword(token, body) {
         return this.authService.setNewPassword(token, body.newPassword, body.confirmPassword);
+    }
+    async activateAccount(token) {
+        return this.authService.activateAccount(token);
     }
 };
 exports.AuthController = AuthController;
@@ -81,6 +91,25 @@ __decorate([
     __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object, Object]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "register", null);
+__decorate([
+    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
+    (0, common_1.Post)("register-admin"),
+    (0, swagger_1.ApiOperation)({ summary: "Register a new admin user" }),
+    (0, swagger_1.ApiBody)({ type: create_user_dto_1.CreateUserDto }),
+    (0, swagger_1.ApiResponse)({
+        status: 201,
+        description: "Admin user registered successfully",
+        type: user_entity_1.User,
+    }),
+    (0, swagger_1.ApiResponse)({ status: 400, description: "Validation failed" }),
+    (0, swagger_1.ApiResponse)({ status: 409, description: "User already exists" }),
+    __param(0, (0, common_1.Body)()),
+    __param(1, (0, current_user_decorator_1.CurrentUser)()),
+    __param(2, (0, common_1.Res)({ passthrough: true })),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [create_user_dto_1.CreateUserDto, Object, Object]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "registerAdmin", null);
 __decorate([
     (0, common_1.Post)("login"),
     (0, common_1.HttpCode)(common_1.HttpStatus.OK),
@@ -164,6 +193,24 @@ __decorate([
     __metadata("design:paramtypes", [String, reset_password_dto_1.SetNewPasswordDto]),
     __metadata("design:returntype", Promise)
 ], AuthController.prototype, "setNewPassword", null);
+__decorate([
+    (0, common_1.Get)("activate/:token"),
+    (0, swagger_1.ApiOperation)({ summary: "Activate user account" }),
+    (0, swagger_1.ApiParam)({
+        name: "token",
+        required: true,
+        description: "Activation token from email",
+    }),
+    (0, swagger_1.ApiResponse)({ status: 200, description: "Account activated successfully" }),
+    (0, swagger_1.ApiResponse)({
+        status: 400,
+        description: "Invalid or expired activation token",
+    }),
+    __param(0, (0, common_1.Param)("token")),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AuthController.prototype, "activateAccount", null);
 exports.AuthController = AuthController = __decorate([
     (0, swagger_1.ApiTags)("Auth"),
     (0, common_1.Controller)("auth"),

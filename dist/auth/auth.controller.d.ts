@@ -9,6 +9,10 @@ export declare class AuthController {
         id: number;
         access_token: string;
     }>;
+    registerAdmin(dto: CreateUserDto, currentUser: any, res: Response): Promise<{
+        id: number;
+        access_token: string;
+    }>;
     login(email: string, password: string, res: Response): Promise<{
         access_token: string;
     }>;
@@ -25,6 +29,9 @@ export declare class AuthController {
         message: string;
     }>;
     setNewPassword(token: string, body: SetNewPasswordDto): Promise<{
+        message: string;
+    }>;
+    activateAccount(token: string): Promise<{
         message: string;
     }>;
 }

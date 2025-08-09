@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Get,
 } from "@nestjs/common";
 import { AuthService } from "./auth.service";
 import { CreateUserDto } from "../users/dto/create-user.dto";
@@ -42,6 +43,7 @@ class ChangePasswordDto {
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  // @UseGuards(JwtAuthGuard)
   @Post("register")
   @ApiOperation({ summary: "Register a new user" })
   @ApiBody({ type: CreateUserDto })
@@ -53,6 +55,31 @@ export class AuthController {
   @ApiResponse({ status: 400, description: "Validation failed" })
   @ApiResponse({ status: 409, description: "User already exists" })
   async register(
+    @Body() dto: CreateUserDto,
+    @CurrentUser() currentUser: any,
+    @Res({ passthrough: true }) res: Response
+  ) {
+    const caller =
+      currentUser ??
+      ({
+        role: { id: 0, name: "guest", level: 0 },
+      } as any);
+
+    return this.authService.register(dto, caller, res);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("register-admin")
+  @ApiOperation({ summary: "Register a new admin user" })
+  @ApiBody({ type: CreateUserDto })
+  @ApiResponse({
+    status: 201,
+    description: "Admin user registered successfully",
+    type: User,
+  })
+  @ApiResponse({ status: 400, description: "Validation failed" })
+  @ApiResponse({ status: 409, description: "User already exists" })
+  async registerAdmin(
     @Body() dto: CreateUserDto,
     @CurrentUser() currentUser: any,
     @Res({ passthrough: true }) res: Response
@@ -154,5 +181,21 @@ export class AuthController {
       body.newPassword,
       body.confirmPassword
     );
+  }
+
+  @Get("activate/:token")
+  @ApiOperation({ summary: "Activate user account" })
+  @ApiParam({
+    name: "token",
+    required: true,
+    description: "Activation token from email",
+  })
+  @ApiResponse({ status: 200, description: "Account activated successfully" })
+  @ApiResponse({
+    status: 400,
+    description: "Invalid or expired activation token",
+  })
+  async activateAccount(@Param("token") token: string) {
+    return this.authService.activateAccount(token);
   }
 }

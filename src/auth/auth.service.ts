@@ -171,4 +171,23 @@ export class AuthService {
       maxAge: 7 * 24 * 60 * 60 * 1000,
     });
   }
+
+  async activateAccount(token: string) {
+    const user = await this.usersService.findByActivationLink(token);
+     console.log("Activation token:", token);
+
+    if (!user) {
+      throw new BadRequestException("Invalid or expired activation link");
+    }
+
+    if (user.is_verified) {
+      throw new BadRequestException("Account already activated");
+    }
+
+    user.is_verified = true;
+    user.activation_link = null; // linkni o‘chirib yuboramiz
+    await this.usersService.saveUser(user);
+
+    return { message: "Account activated successfully" };
+  }
 }

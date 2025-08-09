@@ -34,4 +34,7 @@ export declare class AuthService {
     private generateTokens;
     private saveRefreshToken;
     private setCookie;
+    activateAccount(token: string): Promise<{
+        message: string;
+    }>;
 }

@@ -44,7 +44,7 @@ export class User {
   is_verified: boolean;
 
   @Column({ type: "uuid", nullable: true })
-  activation_link?: string;
+  activation_link: string | null;
 
   @ManyToOne(() => Role, (role) => role.users, { eager: true })
   @JoinColumn({ name: "role_id" })

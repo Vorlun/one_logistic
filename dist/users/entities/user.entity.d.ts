@@ -9,6 +9,8 @@ export declare class User {
     is_active: boolean;
     refresh_token?: string;
     reset_token?: string;
+    is_verified: boolean;
+    activation_link: string | null;
     role: Role;
     vehicles: Vehicle[];
     role_id: number;

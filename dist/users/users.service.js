@@ -19,32 +19,51 @@ const typeorm_2 = require("typeorm");
 const user_entity_1 = require("./entities/user.entity");
 const bcrypt = require("bcryptjs");
 const roles_service_1 = require("../roles/roles.service");
+const mail_service_1 = require("../mail/mail.service");
+const uuid_1 = require("uuid");
 let UsersService = class UsersService {
     userRepository;
     roleService;
-    constructor(userRepository, roleService) {
+    mailService;
+    constructor(userRepository, roleService, mailService) {
         this.userRepository = userRepository;
         this.roleService = roleService;
+        this.mailService = mailService;
     }
-    async createAndReturnFullUser(createUserDto, currentUser) {
+    async createAndReturnFullUser(dto, currentUser) {
         const existing = await this.userRepository.findOne({
-            where: { email: createUserDto.email },
+            where: { email: dto.email },
         });
         if (existing)
             throw new common_1.BadRequestException("Email already exists");
-        if (createUserDto.password !== createUserDto.confirm_password) {
+        if (dto.password !== dto.confirm_password)
             throw new common_1.BadRequestException("Passwords do not match");
-        }
-        const role = await this.roleService.findOne(createUserDto.role_id);
+        const role = await this.roleService.findOne(dto.role_id);
         if (!role)
             throw new common_1.NotFoundException("Role not found");
-        const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
-        const { confirm_password, role_id, ...rest } = createUserDto;
+        const currentLevel = currentUser?.role?.level ?? 0;
+        const targetLevel = role.level;
+        if (targetLevel === 1 && currentLevel < 2)
+            throw new common_1.ForbiddenException("Only admin or super_admin can create manager");
+        if (targetLevel === 2 && currentLevel < 3)
+            throw new common_1.ForbiddenException("Only super_admin can create admin");
+        const hashedPassword = await bcrypt.hash(dto.password, 10);
         const user = this.userRepository.create({
-            ...rest,
+            full_name: dto.full_name,
+            email: dto.email,
             password: hashedPassword,
+            phone_number: dto.phone_number,
+            is_active: dto.is_active ?? true,
             role,
         });
+        if (targetLevel === 0) {
+            user.is_verified = false;
+            user.activation_link = crypto.randomUUID();
+            await this.mailService.sendActivationEmail(user.email, user.activation_link);
+        }
+        else {
+            user.is_verified = true;
+        }
         return await this.userRepository.save(user);
     }
     async findAll(currentUser) {
@@ -166,12 +185,20 @@ let UsersService = class UsersService {
     async saveUser(user) {
         return this.userRepository.save(user);
     }
+    async findByActivationLink(token) {
+        if (!(0, uuid_1.validate)(token))
+            return null;
+        return await this.userRepository.findOne({
+            where: { activation_link: token },
+        });
+    }
 };
 exports.UsersService = UsersService;
 exports.UsersService = UsersService = __decorate([
     (0, common_1.Injectable)(),
     __param(0, (0, typeorm_1.InjectRepository)(user_entity_1.User)),
     __metadata("design:paramtypes", [typeorm_2.Repository,
-        roles_service_1.RolesService])
+        roles_service_1.RolesService,
+        mail_service_1.MailService])
 ], UsersService);
 //# sourceMappingURL=users.service.js.map

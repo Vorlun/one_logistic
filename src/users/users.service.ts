@@ -11,48 +11,70 @@ import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import * as bcrypt from "bcryptjs";
 import { RolesService } from "../roles/roles.service";
+import { MailService } from "../mail/mail.service";
+import { validate as isUuid } from "uuid";
+
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    private readonly roleService: RolesService
+    private readonly roleService: RolesService,
+    private readonly mailService: MailService
   ) {}
 
   async createAndReturnFullUser(
-    createUserDto: CreateUserDto,
+    dto: CreateUserDto,
     currentUser: User
   ): Promise<User> {
     const existing = await this.userRepository.findOne({
-      where: { email: createUserDto.email },
+      where: { email: dto.email },
     });
-
     if (existing) throw new BadRequestException("Email already exists");
 
-    if (createUserDto.password !== createUserDto.confirm_password) {
+    if (dto.password !== dto.confirm_password)
       throw new BadRequestException("Passwords do not match");
-    }
 
-    const role = await this.roleService.findOne(createUserDto.role_id);
+    const role = await this.roleService.findOne(dto.role_id);
     if (!role) throw new NotFoundException("Role not found");
 
-    // ❗CREATE: Level 0 har kimga ochiq, boshqalarga faqat super_admin (3)
-    // if (role.level > 0 && currentUser.role.level < 3) {
-    //   throw new ForbiddenException(
-    //     "You are not allowed to create users with level > 0"
-    //   );
-    // }
+    const currentLevel = currentUser?.role?.level ?? 0;
+    const targetLevel = role.level;
 
-    const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
+    // ✅ CREATE RULES
+    if (targetLevel === 1 && currentLevel < 2)
+      throw new ForbiddenException(
+        "Only admin or super_admin can create manager"
+      );
 
-    const { confirm_password, role_id, ...rest } = createUserDto;
+    if (targetLevel === 2 && currentLevel < 3)
+      throw new ForbiddenException("Only super_admin can create admin");
+
+    // if (targetLevel === 3 && currentLevel < 3)
+    //   throw new ForbiddenException("Only super_admin can create super_admin");
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const user = this.userRepository.create({
-      ...rest,
+      full_name: dto.full_name,
+      email: dto.email,
       password: hashedPassword,
+      phone_number: dto.phone_number,
+      is_active: dto.is_active ?? true,
       role,
     });
+
+    if (targetLevel === 0) {
+      user.is_verified = false;
+      user.activation_link = crypto.randomUUID();
+      await this.mailService.sendActivationEmail(
+        user.email,
+        user.activation_link
+      );
+    } else {
+      user.is_verified = true;
+    }
 
     return await this.userRepository.save(user);
   }
@@ -206,4 +228,12 @@ export class UsersService {
   async saveUser(user: User): Promise<User> {
     return this.userRepository.save(user);
   }
+
+  async findByActivationLink(token: string): Promise<User | null> {
+      if (!isUuid(token)) return null;
+    return await this.userRepository.findOne({
+      where: { activation_link: token },
+    });
+  }
+
 }

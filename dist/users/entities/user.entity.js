@@ -22,6 +22,8 @@ let User = class User {
     is_active;
     refresh_token;
     reset_token;
+    is_verified;
+    activation_link;
     role;
     vehicles;
     role_id;
@@ -63,6 +65,14 @@ __decorate([
     (0, typeorm_1.Column)({ nullable: true }),
     __metadata("design:type", String)
 ], User.prototype, "reset_token", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ default: false }),
+    __metadata("design:type", Boolean)
+], User.prototype, "is_verified", void 0);
+__decorate([
+    (0, typeorm_1.Column)({ type: "uuid", nullable: true }),
+    __metadata("design:type", Object)
+], User.prototype, "activation_link", void 0);
 __decorate([
     (0, typeorm_1.ManyToOne)(() => role_entity_1.Role, (role) => role.users, { eager: true }),
     (0, typeorm_1.JoinColumn)({ name: "role_id" }),
