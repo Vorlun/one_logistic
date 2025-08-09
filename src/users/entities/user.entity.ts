@@ -40,12 +40,18 @@ export class User {
   @Column({ nullable: true })
   reset_token?: string;
 
+  @Column({ default: false })
+  is_verified: boolean;
+
+  @Column({ type: "uuid", nullable: true })
+  activation_link?: string;
+
   @ManyToOne(() => Role, (role) => role.users, { eager: true })
   @JoinColumn({ name: "role_id" })
   role: Role;
 
-    @OneToMany(() => Vehicle, (b) => b.driver)
-    vehicles: Vehicle[];
+  @OneToMany(() => Vehicle, (b) => b.driver)
+  vehicles: Vehicle[];
 
   @Column({ name: "role_id" })
   role_id: number;
